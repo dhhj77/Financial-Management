@@ -50,6 +50,30 @@
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
+  <!-- Firebase SDK (v10.12.0 모듈) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAxTEHb8Utp_EGqp-IAWEzVK7RtNWPw7-A",
+      authDomain: "financial-management-2f780.firebaseapp.com",
+      projectId: "financial-management-2f780",
+      storageBucket: "financial-management-2f780.firebasestorage.app",
+      messagingSenderId: "1082016519215",
+      appId: "1:1082016519215:web:2b4d01553b685e7b9f62da"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.firebaseDb = db;
+    window.firebaseDoc = doc;
+    window.firebaseSetDoc = setDoc;
+    window.firebaseOnSnapshot = onSnapshot;
+    window.firebaseGetDoc = getDoc;
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
+
   <style>
     * {
       word-break: keep-all;
@@ -108,6 +132,12 @@
 
       <!-- Action Buttons -->
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Firebase Sync Status Badge -->
+        <div id="sync-status" class="flex items-center gap-1 px-2.5 py-1 bg-pink-50 border border-pink-200 rounded-full text-[11px] font-semibold text-pink-500">
+          <i class="fa-solid fa-cloud"></i>
+          <span id="sync-status-text">동기화 대기</span>
+        </div>
+
         <button onclick="openDebtPayModal()" class="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white font-cute text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-cute hover:shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0">
           <i class="fa-solid fa-piggy-bank"></i>
           <span>상환 기록</span>
@@ -839,22 +869,87 @@
       safeSetStorage(STORAGE_KEY, JSON.stringify(appData));
     }
 
-    function saveAppData() {
-      safeSetStorage(STORAGE_KEY, JSON.stringify(appData));
-      renderAll();
-    }
-
-    function confirmResetToDefault() {
-      if (window.confirm("정말 엑셀 초기 데이터로 되돌리시겠습니까?")) {
-        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-        saveAppData();
-        showToast("🌸 엑셀 원본 데이터로 깨끗하게 복구되었습니다!");
+    function updateSyncStatus(status, text) {
+      const statusEl = document.getElementById('sync-status');
+      const textEl = document.getElementById('sync-status-text');
+      if (!statusEl || !textEl) return;
+      textEl.innerText = text;
+      if (status === 'synced') {
+        statusEl.className = 'flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] font-semibold text-emerald-600 transition';
+        statusEl.innerHTML = '<i class="fa-solid fa-cloud-check"></i><span id="sync-status-text">' + text + '</span>';
+      } else if (status === 'syncing') {
+        statusEl.className = 'flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-[11px] font-semibold text-amber-600 transition';
+        statusEl.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i><span id="sync-status-text">' + text + '</span>';
+      } else if (status === 'error') {
+        statusEl.className = 'flex items-center gap-1 px-2.5 py-1 bg-rose-50 border border-rose-200 rounded-full text-[11px] font-semibold text-rose-600 transition';
+        statusEl.innerHTML = '<i class="fa-solid fa-cloud-slash"></i><span id="sync-status-text">' + text + '</span>';
       }
     }
 
+    let isSavingToCloud = false;
+
+    // Cloud (Firebase) Sync Functions
+    async function syncSaveToCloud() {
+      if (!window.firebaseDb || !window.firebaseDoc || !window.firebaseSetDoc) return;
+      try {
+        isSavingToCloud = true;
+        updateSyncStatus('syncing', '클라우드 저장 중...');
+        const docRef = window.firebaseDoc(window.firebaseDb, "finance", "mainData");
+        await window.firebaseSetDoc(docRef, {
+          data: JSON.stringify(appData),
+          updatedAt: new Date().toISOString()
+        });
+        updateSyncStatus('synced', '클라우드 연동됨');
+      } catch (err) {
+        console.error("Firebase save error:", err);
+        updateSyncStatus('error', '로컬 저장됨');
+      } finally {
+        setTimeout(() => { isSavingToCloud = false; }, 300);
+      }
+    }
+
+    function initFirebaseSync() {
+      if (!window.firebaseDb || !window.firebaseDoc || !window.firebaseOnSnapshot) return;
+      try {
+        const docRef = window.firebaseDoc(window.firebaseDb, "finance", "mainData");
+        window.firebaseOnSnapshot(docRef, (docSnap) => {
+          if (docSnap.exists()) {
+            if (isSavingToCloud) return;
+            const remote = docSnap.data();
+            if (remote && remote.data) {
+              try {
+                const parsed = JSON.parse(remote.data);
+                if (parsed && parsed.debts && parsed.incomes && parsed.expenses) {
+                  appData = parsed;
+                  safeSetStorage(STORAGE_KEY, JSON.stringify(appData));
+                  renderAll();
+                  updateSyncStatus('synced', '클라우드 연동됨');
+                }
+              } catch (e) {
+                console.error("Firebase parse error:", e);
+              }
+            }
+          } else {
+            // First time: upload default data to Cloud
+            syncSaveToCloud();
+          }
+        }, (err) => {
+          console.warn("Firestore subscription error:", err);
+          updateSyncStatus('error', '오프라인 (로컬)');
+        });
+      } catch (e) {
+        console.error("Firebase listener error:", e);
+      }
+    }
+
+    window.addEventListener('firebase-ready', () => {
+      initFirebaseSync();
+    });
+
     function saveAppData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      safeSetStorage(STORAGE_KEY, JSON.stringify(appData));
       renderAll();
+      syncSaveToCloud();
     }
 
     function confirmResetToDefault() {
