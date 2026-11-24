@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>재정 & 채무 탈출 마스터</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pink: {
+              50: '#FFF0F5',
+              100: '#FFE4EC',
+              200: '#FECDDB',
+              300: '#FDA5BE',
+              400: '#FB719A',
+              500: '#F43F75',
+              600: '#E11D5F',
+              700: '#BE1250',
+              800: '#9E1346',
+              900: '#84153E'
+            }
+          },
+          boxShadow: {
+            cute: '0 8px 24px -4px rgba(244, 63, 117, 0.12), 0 4px 12px -2px rgba(244, 63, 117, 0.08)',
+            'cute-lg': '0 16px 32px -6px rgba(244, 63, 117, 0.18)'
+          },
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+            cute: ['"Jua"', 'Pretendard', 'sans-serif'],
+            num: ['"Nunito"', 'Pretendard', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Jua & Nunito -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    * {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: linear-gradient(135deg, #FFF0F5 0%, #FFF5F8 50%, #FFEBF1 100%);
+      min-height: 100vh;
+      color: #4A333E;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #FFE8EE;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #FDA5BE;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #F43F75;
+    }
+    .stamp-cell {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .stamp-cell:active {
+      transform: scale(0.88);
+    }
+    @keyframes floating {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    .float-anim {
+      animation: floating 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased selection:bg-pink-300 selection:text-white pb-12">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-pink-200 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 cursor-pointer min-w-0" onclick="switchTab('dashboard')">
+        <span class="text-2xl sm:text-3xl float-anim shrink-0">🌸</span>
+        <div class="truncate">
+          <h1 class="text-base sm:text-xl font-cute font-bold text-pink-600 tracking-wide flex items-center gap-1.5 truncate">
+            <span>재정 & 채무 탈출 마스터</span>
+          </h1>
+          <p class="text-[11px] sm:text-xs text-pink-400 font-medium hidden sm:block truncate">차근차근 갚고 모아 자유로운 부자 되기 프로젝트 🐷✨</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button onclick="openDebtPayModal()" class="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white font-cute text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-cute hover:shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0">
+          <i class="fa-solid fa-piggy-bank"></i>
+          <span>상환 기록</span>
+        </button>
+
+        <div class="relative group">
+          <button class="p-2 text-pink-500 hover:text-pink-700 hover:bg-pink-100 rounded-full transition" title="데이터 관리">
+            <i class="fa-solid fa-gear text-base sm:text-lg"></i>
+          </button>
+          <div class="absolute right-0 mt-2 w-48 bg-white border border-pink-200 rounded-2xl shadow-cute p-2 hidden group-hover:block z-50">
+            <button onclick="exportDataJSON()" class="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-pink-50 rounded-xl flex items-center gap-2">
+              <i class="fa-solid fa-download text-pink-500"></i> 백업 데이터 저장 (.json)
+            </button>
+            <label class="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-pink-50 rounded-xl flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-upload text-pink-500"></i> 데이터 불러오기
+              <input type="file" id="importFileInput" onchange="importDataJSON(event)" class="hidden" accept=".json">
+            </label>
+            <div class="border-t border-pink-100 my-1"></div>
+            <button onclick="confirmResetToDefault()" class="w-full text-left px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-50 rounded-xl flex items-center gap-2">
+              <i class="fa-solid fa-rotate-left"></i> 엑셀 초기값으로 복구
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 border-t border-pink-100 flex overflow-x-auto space-x-1 sm:space-x-2 py-2 custom-scroll text-xs sm:text-sm font-semibold">
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn px-3 sm:px-4 py-1.5 rounded-full text-pink-600 bg-pink-100 whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-solid fa-chart-pie"></i><span>한눈에 요약</span>
+      </button>
+      <button onclick="switchTab('debts')" id="tab-btn-debts" class="tab-btn px-3 sm:px-4 py-1.5 rounded-full text-gray-600 hover:bg-pink-50 whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-solid fa-receipt"></i><span>채무 관리</span>
+      </button>
+      <button onclick="switchTab('cashflow')" id="tab-btn-cashflow" class="tab-btn px-3 sm:px-4 py-1.5 rounded-full text-gray-600 hover:bg-pink-50 whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-solid fa-wallet"></i><span>수입 & 지출</span>
+      </button>
+      <button onclick="switchTab('strategy')" id="tab-btn-strategy" class="tab-btn px-3 sm:px-4 py-1.5 rounded-full text-gray-600 hover:bg-pink-50 whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-solid fa-wand-magic-sparkles"></i><span>상환 플래너</span>
+      </button>
+      <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn px-3 sm:px-4 py-1.5 rounded-full text-gray-600 hover:bg-pink-50 whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-regular fa-calendar-check"></i><span>납입 캘린더</span>
+      </button>
+      <button onclick="switchTab('habits')" id="tab-btn-habits" class="tab-btn px-3 sm:px-4 py-1.5 rounded-full text-gray-600 hover:bg-pink-50 whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-solid fa-calendar-days"></i><span>습관 캘린더</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+
+    <!-- ================= TAB 1: DASHBOARD ================= -->
+    <section id="tab-content-dashboard" class="tab-content space-y-6">
+      <!-- Top Stat Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-white border border-pink-100 rounded-3xl p-3.5 sm:p-5 shadow-cute">
+          <div class="flex items-center justify-between text-pink-500 mb-1">
+            <span class="text-xs font-cute">총 채무 잔액</span>
+            <i class="fa-solid fa-receipt text-sm"></i>
+          </div>
+          <div id="dash-total-debt" class="text-lg sm:text-2xl font-bold font-num text-pink-600 truncate">0원</div>
+          <div class="text-[11px] text-gray-400 mt-1 flex items-center justify-between">
+            <span>목표 상환율</span>
+            <span id="dash-debt-payoff-pct" class="font-bold text-pink-500 font-num">0% 달성</span>
+          </div>
+          <div class="w-full bg-pink-100 h-1.5 rounded-full mt-1.5 overflow-hidden">
+            <div id="debt-payoff-bar" class="bg-gradient-to-r from-pink-400 to-rose-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-pink-100 rounded-3xl p-3.5 sm:p-5 shadow-cute">
+          <div class="flex items-center justify-between text-emerald-500 mb-1">
+            <span class="text-xs font-cute">월 고정 수입</span>
+            <i class="fa-solid fa-money-bill-wave text-sm"></i>
+          </div>
+          <div id="dash-total-income" class="text-lg sm:text-2xl font-bold font-num text-emerald-600 truncate">0원</div>
+          <div class="text-[11px] text-gray-400 mt-1">월급 + 정기 외주 합계</div>
+        </div>
+
+        <div class="bg-white border border-pink-100 rounded-3xl p-3.5 sm:p-5 shadow-cute">
+          <div class="flex items-center justify-between text-rose-500 mb-1">
+            <span class="text-xs font-cute">월 고정 지출 & 납입</span>
+            <i class="fa-solid fa-cart-shopping text-sm"></i>
+          </div>
+          <div id="dash-total-fixed-outflow" class="text-lg sm:text-2xl font-bold font-num text-rose-500 truncate">0원</div>
+          <div class="text-[11px] text-gray-400 mt-1 flex justify-between">
+            <span>대출납입: <b id="dash-sub-debt-pay" class="font-num text-gray-600">0원</b></span>
+            <span>지출: <b id="dash-sub-expense" class="font-num text-gray-600">0원</b></span>
+          </div>
+        </div>
+
+        <div class="bg-white border border-pink-100 rounded-3xl p-3.5 sm:p-5 shadow-cute">
+          <div class="flex items-center justify-between text-violet-500 mb-1">
+            <span class="text-xs font-cute">월 잔여 여유 자금</span>
+            <i class="fa-solid fa-sparkles text-sm"></i>
+          </div>
+          <div id="dash-free-cash" class="text-lg sm:text-2xl font-bold font-num text-violet-600 truncate">0원</div>
+          <div class="text-[11px] text-gray-400 mt-1">상환 추가 투입 또는 적금 가능액</div>
+        </div>
+      </div>
+
+      <!-- High Interest Attention Banner -->
+      <div class="bg-gradient-to-r from-rose-500 to-pink-500 rounded-3xl p-4 sm:p-6 text-white shadow-cute flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl sm:text-4xl">🚨</span>
+          <div>
+            <h3 class="font-cute text-base sm:text-lg flex items-center gap-2">
+              <span>최우선 갚아야 할 고금리 타겟: </span>
+              <span id="hero-target-name" class="font-bold underline decoration-pink-200">확인중...</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-pink-100 mt-0.5">이자 부담이 가장 큰 고금리 채무를 집중 상환하면 매달 나가는 이자를 즉시 줄일 수 있습니다!</p>
+          </div>
+        </div>
+        <button onclick="switchTab('strategy')" class="bg-white text-pink-600 hover:bg-pink-50 font-cute text-xs sm:text-sm px-4 py-2 sm:py-2.5 rounded-2xl shadow transition whitespace-nowrap shrink-0">
+          눈사태 플래너 보기 🔥
+        </button>
+      </div>
+
+      <!-- Visual Charts Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute">
+          <h3 class="font-cute text-sm sm:text-base text-gray-700 mb-3 flex items-center gap-2">
+            <span>🍩</span> 채무 잔액 비율 분포
+          </h3>
+          <div class="relative h-60 w-full flex items-center justify-center">
+            <canvas id="debtPieChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute">
+          <h3 class="font-cute text-sm sm:text-base text-gray-700 mb-3 flex items-center gap-2">
+            <span>📊</span> 수입 vs 지출 & 상환 구조
+          </h3>
+          <div class="relative h-60 w-full flex items-center justify-center">
+            <canvas id="cashflowBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- High Interest List Preview -->
+      <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-cute text-sm sm:text-base text-gray-700 flex items-center gap-2">
+            <span>🔥</span> 고금리 집중 관리 목록
+          </h3>
+          <span id="dash-high-interest-count" class="text-xs text-rose-500 font-bold">0건</span>
+        </div>
+        <div id="dash-high-interest-list" class="space-y-2">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 2: DEBTS MANAGEMENT ================= -->
+    <section id="tab-content-debts" class="tab-content hidden space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg sm:text-2xl font-cute text-pink-600 flex items-center gap-2">
+            <span>💳</span> 채무 목록 & 잔액 관리
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">대출 항목을 자유롭게 추가, 수정, 삭제하고 매월 갚은 내역을 갱신하세요.</p>
+        </div>
+        <button onclick="openDebtModal()" class="self-start sm:self-auto bg-pink-500 hover:bg-pink-600 text-white font-cute text-xs sm:text-sm px-4 py-2 rounded-2xl shadow-cute flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-plus"></i> 새 채무 등록
+        </button>
+      </div>
+
+      <div class="bg-white border border-pink-100 rounded-3xl shadow-cute overflow-hidden">
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-pink-50/60 border-b border-pink-100 text-xs font-cute text-pink-600">
+                <th class="p-3 sm:p-4">대출명 / 메모</th>
+                <th class="p-3 sm:p-4 text-right">잔액</th>
+                <th class="p-3 sm:p-4 text-center">금리</th>
+                <th class="p-3 sm:p-4 text-right">월 상환액</th>
+                <th class="p-3 sm:p-4 text-center">납입일</th>
+                <th class="p-3 sm:p-4 text-center">만기일</th>
+                <th class="p-3 sm:p-4 text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody id="debt-table-body" class="divide-y divide-pink-50 text-xs sm:text-sm">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 3: CASHFLOW (INCOME & EXPENSE) ================= -->
+    <section id="tab-content-cashflow" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg sm:text-2xl font-cute text-pink-600 flex items-center gap-2">
+            <span>👛</span> 수입 & 고정 지출 관리
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">매월 들어오는 돈과 고정으로 나가는 돈을 꼼꼼하게 기록하세요.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Income Panel -->
+        <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">💰</span>
+              <div>
+                <h3 class="font-cute text-base sm:text-lg text-emerald-600">수입 항목</h3>
+                <span id="incomes-count-label" class="text-xs text-gray-400">0건</span>
+              </div>
+            </div>
+            <button onclick="openIncomeExpenseModal('income')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-cute text-xs px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1">
+              <i class="fa-solid fa-plus"></i> 수입 추가
+            </button>
+          </div>
+
+          <div class="mb-3 p-3 bg-emerald-50 rounded-2xl flex justify-between items-center text-xs sm:text-sm">
+            <span class="font-cute text-emerald-800">월 수입 총액</span>
+            <span id="income-total-val" class="font-num font-bold text-emerald-700 text-base">0원</span>
+          </div>
+
+          <div id="income-list" class="space-y-2">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Expense Panel -->
+        <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">💸</span>
+              <div>
+                <h3 class="font-cute text-base sm:text-lg text-rose-500">고정 지출 항목</h3>
+                <span id="expenses-count-label" class="text-xs text-gray-400">0건</span>
+              </div>
+            </div>
+            <button onclick="openIncomeExpenseModal('expense')" class="bg-rose-500 hover:bg-rose-600 text-white font-cute text-xs px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1">
+              <i class="fa-solid fa-plus"></i> 지출 추가
+            </button>
+          </div>
+
+          <div class="mb-3 p-3 bg-rose-50 rounded-2xl flex justify-between items-center text-xs sm:text-sm">
+            <span class="font-cute text-rose-800">월 고정지출 총액</span>
+            <span id="expense-total-val" class="font-num font-bold text-rose-700 text-base">0원</span>
+          </div>
+
+          <div id="expense-list" class="space-y-2">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 4: REPAYMENT STRATEGY PLANNER ================= -->
+    <section id="tab-content-strategy" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg sm:text-2xl font-cute text-pink-600 flex items-center gap-2">
+            <span>🪄</span> 스마트 상환 전략 플래너
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">상황에 맞게 전략을 선택하고 추가 납입으로 완납 기간을 대폭 줄여보세요.</p>
+        </div>
+        <!-- Strategy Toggle -->
+        <div class="flex items-center gap-1 bg-white p-1 rounded-2xl border border-pink-200 self-start sm:self-auto shadow-sm">
+          <button id="btn-strat-avalanche" onclick="setStrategyMode('avalanche')" class="px-3.5 py-1.5 rounded-xl font-cute text-xs sm:text-sm transition bg-pink-500 text-white shadow-cute">
+            🔥 눈사태 (고금리 우선)
+          </button>
+          <button id="btn-strat-snowball" onclick="setStrategyMode('snowball')" class="px-3.5 py-1.5 rounded-xl font-cute text-xs sm:text-sm transition text-pink-600 hover:bg-pink-50">
+            ⛄ 눈덩이 (소액 우선)
+          </button>
+        </div>
+      </div>
+
+      <div id="strat-description" class="text-xs sm:text-sm font-cute text-pink-600 bg-pink-50/80 p-3 rounded-2xl border border-pink-100">
+        🔥 이자 비용을 극적으로 줄이는 고금리 우선 순위 (이자 최소화 전략)
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Ranked Debt List -->
+        <div class="lg:col-span-2 space-y-3" id="strategy-debt-order-list">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Extra Payment Booster Simulator -->
+        <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute h-fit space-y-4">
+          <h3 class="font-cute text-base text-gray-800 flex items-center gap-2">
+            <span>🚀</span> 추가 상환 부스터 시뮬레이터
+          </h3>
+          <p class="text-xs text-gray-500 leading-relaxed">
+            매달 커피값이나 여가비를 아껴 <b>추가로 상환</b>하면 기간과 총 이자가 얼마나 절약되는지 확인하세요!
+          </p>
+
+          <div>
+            <div class="flex justify-between items-center text-xs mb-1">
+              <span class="text-gray-600 font-bold">매달 추가 납입할 금액</span>
+              <span id="extra-pay-label" class="font-bold text-pink-600 font-num text-sm">0원</span>
+            </div>
+            <input type="range" id="extra-pay-slider" min="0" max="1000000" step="50000" value="0" oninput="updateSimulator()" class="w-full accent-pink-500 cursor-pointer">
+            <div class="flex justify-between text-[10px] text-gray-400 mt-1 font-num">
+              <span>0원</span>
+              <span>+30만</span>
+              <span>+50만</span>
+              <span>+100만</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="setQuickExtra(100000)" class="flex-1 py-1 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-xl text-xs font-cute">+10만</button>
+            <button onclick="setQuickExtra(200000)" class="flex-1 py-1 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-xl text-xs font-cute">+20만</button>
+            <button onclick="setQuickExtra(300000)" class="flex-1 py-1 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-xl text-xs font-cute">+30만</button>
+          </div>
+
+          <div class="p-4 bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 rounded-2xl space-y-2 text-xs">
+            <div class="flex justify-between text-gray-600">
+              <span>현재 속도 완납:</span>
+              <span id="sim-base-months" class="font-bold font-num text-gray-800">계산중...</span>
+            </div>
+            <div class="flex justify-between text-pink-600 font-bold">
+              <span>단축 효과:</span>
+              <span id="sim-boosted-result" class="font-num text-sm">계산중...</span>
+            </div>
+            <div class="text-[11px] text-pink-500 pt-1 border-t border-pink-200" id="sim-boosted-sub">
+              이자 절약 효과 확인중...
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 5: PAYMENT CALENDAR & TIMELINE ================= -->
+    <section id="tab-content-calendar" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg sm:text-2xl font-cute text-pink-600 flex items-center gap-2">
+            <span>📅</span> 매월 입출금 & 납입 캘린더
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">날짜순으로 정리된 매달의 자금 흐름을 미리 확인하고 잔고를 지키세요.</p>
+        </div>
+      </div>
+
+      <!-- Upcoming D-Day Quick Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="timeline-dday-cards">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Monthly Flow List -->
+      <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute">
+        <h3 class="font-cute text-base text-gray-800 mb-4 flex items-center gap-2">
+          <span>🗓️</span> 1일부터 31일까지 월간 흐름 타임라인
+        </h3>
+        <div class="relative pl-6 sm:pl-8 border-l-2 border-pink-200 space-y-4" id="monthly-timeline-flow">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 6: HABITS MINI CALENDAR ================= -->
+    <section id="tab-content-habits" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg sm:text-2xl font-cute text-pink-600 flex items-center gap-2">
+            <span>🗓️</span> 월간 절약 습관 통합 미니 캘린더
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">매일매일 실천한 습관 아이콘을 탭해서 도장을 찍고 절약 금액을 모아보세요!</p>
+        </div>
+        <!-- Month Controller -->
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-pink-200 shadow-sm self-start sm:self-auto">
+          <button onclick="changeHabitMonth(-1)" class="p-1.5 text-pink-500 hover:text-pink-700 hover:bg-pink-50 rounded-xl transition">
+            <i class="fa-solid fa-chevron-left text-xs"></i>
+          </button>
+          <span id="habit-month-label" class="font-cute text-sm sm:text-base text-pink-600 min-w-[90px] text-center font-num">2026년 11월</span>
+          <button onclick="changeHabitMonth(1)" class="p-1.5 text-pink-500 hover:text-pink-700 hover:bg-pink-50 rounded-xl transition">
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+          <button onclick="resetHabitMonthToCurrent()" class="text-[11px] bg-pink-100 text-pink-600 px-2 py-0.5 rounded-lg font-cute ml-1">오늘</button>
+        </div>
+      </div>
+
+      <!-- Integrated Habit Dashboard Card -->
+      <div class="bg-white border border-pink-100 rounded-3xl p-4 sm:p-6 shadow-cute space-y-5">
+        <!-- Monthly Summary Highlights -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-2 border-b border-pink-100">
+          <div class="bg-pink-50/70 rounded-2xl p-3 sm:p-4 border border-pink-100 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-cute text-pink-600 flex items-center gap-1.5">
+                <span>🎮</span> PC방 안 가기
+              </div>
+              <div class="text-base sm:text-lg font-bold font-num text-gray-800 mt-0.5" id="pc-stat-count">0일 성공</div>
+              <div class="text-[10px] text-pink-400">회당 3,000원 방어</div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs sm:text-sm font-num font-bold text-pink-600" id="pc-saved-estimate">+0원</span>
+              <div class="text-[10px] text-gray-400 font-num" id="pc-stat-pct">0%</div>
+            </div>
+          </div>
+
+          <div class="bg-amber-50/70 rounded-2xl p-3 sm:p-4 border border-amber-100 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-cute text-amber-700 flex items-center gap-1.5">
+                <span>☕</span> 커피 1잔만 마시기
+              </div>
+              <div class="text-base sm:text-lg font-bold font-num text-gray-800 mt-0.5" id="coffee-stat-count">0일 성공</div>
+              <div class="text-[10px] text-amber-500">회당 4,000원 방어</div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs sm:text-sm font-num font-bold text-amber-600" id="coffee-saved-estimate">+0원</span>
+              <div class="text-[10px] text-gray-400 font-num" id="coffee-stat-pct">0%</div>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-3 sm:p-4 text-white flex items-center justify-between shadow-cute">
+            <div>
+              <div class="text-[11px] font-cute text-pink-100 flex items-center gap-1">
+                <span>💰</span> 이번 달 총 지출 방어액
+              </div>
+              <div class="text-lg sm:text-2xl font-bold font-num text-white mt-0.5" id="total-saved-estimate">0원</div>
+              <div class="text-[10px] text-pink-100">대출 조기 상환 재원 확보!</div>
+            </div>
+            <span class="text-3xl float-anim">🌸</span>
+          </div>
+        </div>
+
+        <!-- Integrated Calendar Container -->
+        <div>
+          <!-- Calendar Days Header -->
+          <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs font-bold text-gray-400 mb-2">
+            <span class="text-rose-400">일</span>
+            <span>월</span>
+            <span>화</span>
+            <span>수</span>
+            <span>목</span>
+            <span>금</span>
+            <span class="text-sky-400">토</span>
+          </div>
+
+          <!-- Calendar Days Grid -->
+          <div id="calendar-combined-grid" class="grid grid-cols-7 gap-1 sm:gap-2">
+            <!-- Dynamically populated day cells -->
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-pink-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1"><span class="px-1.5 py-0.5 bg-pink-500 text-white text-[10px] rounded-md font-bold">🎮</span> PC방 안 가기 (3,000원)</span>
+            <span class="flex items-center gap-1"><span class="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] rounded-md font-bold">☕</span> 커피 1잔만 (4,000원)</span>
+          </div>
+          <span class="text-[11px] text-pink-500 font-medium">※ 원하는 아이콘을 탭해 간편하게 토글하세요</span>
+        </div>
+      </div>
+
+      <!-- Mid-term Debt Goal Banner -->
+      <div class="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-3xl p-5 shadow-cute flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">🎯</span>
+          <div>
+            <div class="font-cute text-base sm:text-lg text-pink-700">2026년 10월 청약담보대출(990만) 완납 목표</div>
+            <div class="text-xs text-pink-500 mt-0.5">매월 40만원 이상 꾸준히 모아가면 기한 내에 완전히 졸업할 수 있어요!</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold text-pink-600 font-num bg-white px-3 py-1.5 rounded-xl border border-pink-200" id="dday-cheongyak-mini">
+            D-Day 계산중...
+          </span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. DEBT ADD / EDIT MODAL -->
+  <div id="modal-debt" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-pink-100 max-h-[90vh] overflow-y-auto custom-scroll">
+      <div class="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
+        <h3 id="modal-debt-title" class="text-base sm:text-lg font-cute text-pink-600 flex items-center gap-2">
+          <span>🌸</span> 채무 등록 / 수정
+        </h3>
+        <button onclick="closeModal('modal-debt')" class="text-gray-400 hover:text-gray-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="debt-form" onsubmit="handleDebtFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="debt-form-id">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">대출명 / 금융기관</label>
+          <input type="text" id="debt-form-name" required placeholder="예: 토스뱅크비상금, SBI저축은행" class="w-full border border-pink-200 rounded-2xl p-2.5 focus:outline-none focus:border-pink-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">현재 잔액 (원)</label>
+            <input type="number" id="debt-form-balance" required min="0" placeholder="예: 3000000" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">연 이자율 (%)</label>
+            <input type="number" id="debt-form-rate" required step="0.01" min="0" max="100" placeholder="예: 11.64" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">월 상환액 (원)</label>
+            <input type="number" id="debt-form-monthly" required min="0" placeholder="예: 30000" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">매월 납입일</label>
+            <input type="number" id="debt-form-day" required min="1" max="31" placeholder="예: 25" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">만기 기한</label>
+          <input type="text" id="debt-form-maturity" placeholder="예: 2027.03.02 또는 27.11.04" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">메모 (선택)</label>
+          <input type="text" id="debt-form-memo" placeholder="예: 고금리 우선 상환 타겟" class="w-full border border-pink-200 rounded-2xl p-2.5 focus:outline-none focus:border-pink-500">
+        </div>
+
+        <div class="pt-3 flex gap-2 justify-end">
+          <button type="button" onclick="closeModal('modal-debt')" class="px-4 py-2 border border-gray-200 rounded-2xl font-cute text-gray-600 hover:bg-gray-100">취소</button>
+          <button type="submit" class="px-5 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-2xl font-cute shadow-cute">저장하기 🌸</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. INCOME / EXPENSE ADD / EDIT MODAL -->
+  <div id="modal-inexp" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-pink-100">
+      <div class="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
+        <h3 id="modal-inexp-title" class="text-base sm:text-lg font-cute text-pink-600 flex items-center gap-2">
+          <span>💰</span> 수입 / 지출 항목 등록
+        </h3>
+        <button onclick="closeModal('modal-inexp')" class="text-gray-400 hover:text-gray-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="inexp-form" onsubmit="handleInExpFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="inexp-form-id">
+        <input type="hidden" id="inexp-form-type">
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">항목 이름</label>
+          <input type="text" id="inexp-form-name" required placeholder="예: 한국기원 월급, 십일조, 인터넷비" class="w-full border border-pink-200 rounded-2xl p-2.5 focus:outline-none focus:border-pink-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">금액 (원)</label>
+            <input type="number" id="inexp-form-amount" required min="0" placeholder="예: 2450000" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">정기 날짜 (일)</label>
+            <input type="number" id="inexp-form-day" min="1" max="31" placeholder="예: 24" class="w-full border border-pink-200 rounded-2xl p-2.5 font-num focus:outline-none focus:border-pink-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">구분</label>
+          <select id="inexp-form-category" class="w-full border border-pink-200 rounded-2xl p-2.5 focus:outline-none focus:border-pink-500 bg-white">
+            <option value="fixed">고정 (매달 발생)</option>
+            <option value="variable">변동 (상황에 따라 발생)</option>
+          </select>
+        </div>
+
+        <div class="pt-3 flex gap-2 justify-end">
+          <button type="button" onclick="closeModal('modal-inexp')" class="px-4 py-2 border border-gray-200 rounded-2xl font-cute text-gray-600 hover:bg-gray-100">취소</button>
+          <button type="submit" class="px-5 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-2xl font-cute shadow-cute">저장하기 🌸</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. QUICK DEBT PAYOFF / DEDUCTION MODAL (AUTO-FILL MONTHLY PAYMENT) -->
+  <div id="modal-pay" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-pink-100">
+      <div class="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
+        <h3 class="text-base sm:text-lg font-cute text-pink-600 flex items-center gap-2">
+          <span>🐷</span> 대출 원금 상환 기록
+        </h3>
+        <button onclick="closeModal('modal-pay')" class="text-gray-400 hover:text-gray-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs sm:text-sm">
+        <p class="text-xs text-gray-500 leading-relaxed">
+          선택한 대출의 <b>월 납입금액이 자동으로 입력</b>되어 있습니다. 확인 후 [상환 확정] 버튼만 누르면 즉시 잔액에서 차감됩니다! ✨
+        </p>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">상환할 대출 선택</label>
+          <select id="pay-target-debt" onchange="onPayTargetDebtChange()" class="w-full border border-pink-200 rounded-2xl p-2.5 focus:outline-none focus:border-pink-500 bg-white font-medium text-xs sm:text-sm">
+            <!-- Dynamically populated options -->
+          </select>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block font-bold text-gray-700">상환 금액 (원)</label>
+            <span class="text-[11px] text-pink-500 font-medium">월 납입액 자동 채움</span>
+          </div>
+          <input type="number" id="pay-amount-input" min="1" step="1" class="w-full border border-pink-200 rounded-2xl p-2.5 focus:outline-none focus:border-pink-500 font-num font-bold text-pink-600 text-base">
+          <div class="text-[11px] text-gray-400 mt-1 flex justify-between">
+            <span id="pay-target-current-balance">현재 잔액: -</span>
+            <span id="pay-target-after-balance" class="font-bold text-emerald-600">상환 후: -</span>
+          </div>
+        </div>
+
+        <div class="pt-3 flex gap-2 justify-end">
+          <button type="button" onclick="closeModal('modal-pay')" class="px-4 py-2 border border-gray-200 rounded-2xl font-cute text-gray-600 hover:bg-gray-100">취소</button>
+          <button type="button" onclick="executeDebtPayoff()" class="px-5 py-2 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-cute shadow-cute hover:from-pink-600 hover:to-rose-500 flex items-center gap-1.5">
+            <span>상환 확정 🌸</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-[90vw]"></div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // --- 1. DEFAULT DATA PRELOAD (From User's Excel File) ---
+    const DEFAULT_DATA = {
+      initialTotalDebt: 48674624,
+      debts: [
+        { id: 'd1', name: 'SBI저축은행', balance: 13012797, rate: 15.2, monthlyPayment: 681442, dueDay: 25, maturityDate: '2028-09-03', memo: '고금리 1순위 상환 타겟' },
+        { id: 'd2', name: '토스뱅크비상금', balance: 6000000, rate: 14.95, monthlyPayment: 80000, dueDay: 25, maturityDate: '2027-11-16', memo: '마이너스통장 성격' },
+        { id: 'd3', name: '토스뱅크 햇살론특례', balance: 5500000, rate: 12.5, monthlyPayment: 56506, dueDay: 25, maturityDate: '2030-10-07', memo: '특례보증' },
+        { id: 'd4', name: '카카오뱅크비상금', balance: 3000000, rate: 11.64, monthlyPayment: 30000, dueDay: 25, maturityDate: '2027-03-02', memo: '비상금대출' },
+        { id: 'd5', name: 'KB저축은행 햇살론일반', balance: 5261827, rate: 6.5, monthlyPayment: 250000, dueDay: 4, maturityDate: '2028-10-02', memo: '햇살론' },
+        { id: 'd6', name: '정기적금담보대출1', balance: 4000000, rate: 5.75, monthlyPayment: 20000, dueDay: 3, maturityDate: '2030-10-15', memo: '예적금 담보대출' },
+        { id: 'd7', name: '청약저축담보대출', balance: 9900000, rate: 3.87, monthlyPayment: 32000, dueDay: 3, maturityDate: '2028-09-03', memo: '26년 10월까지 완납 목표!' },
+        { id: 'd8', name: '정기적금담보대출2', balance: 2000000, rate: 3.87, monthlyPayment: 10000, dueDay: 17, maturityDate: '2030-10-15', memo: '예적금 담보대출 2' }
+      ],
+      incomes: [
+        { id: 'i1', name: '한국기원 월급', amount: 2450000, dueDay: 24, category: 'fixed' },
+        { id: 'i2', name: '잼스트리 외주', amount: 500000, dueDay: 5, category: 'fixed' }
+      ],
+      expenses: [
+        { id: 'e1', name: '십일조 (교회)', amount: 295000, dueDay: 25, category: 'fixed' },
+        { id: 'e2', name: '청년회비 (교회)', amount: 20000, dueDay: 25, category: 'fixed' },
+        { id: 'e3', name: '인터넷 통신비', amount: 27500, dueDay: 20, category: 'fixed' },
+        { id: 'e4', name: '핸드폰 통신비', amount: 66500, dueDay: 25, category: 'fixed' }
+      ],
+      habitCalendar: {
+        pcCheckedDays: [],
+        coffeeCheckedDays: []
+      }
+    };
+
+    // Global State
+    let appData = {};
+    let activeStrategy = 'avalanche';
+    let debtChart = null;
+    let cashflowChart = null;
+    let currentHabitDate = new Date();
+
+    const STORAGE_KEY = 'PINK_FINANCE_APP_V3';
+
+    // Safe Storage Wrapper
+    function safeGetStorage(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function safeSetStorage(key, val) {
+      try {
+        localStorage.setItem(key, val);
+      } catch (e) {
+        // Storage access restricted or disabled
+      }
+    }
+
+    // Safe DOM manipulation helpers
+    function safeSetText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    }
+
+    function safeSetHTML(id, html) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    }
+
+    function formatWon(num) {
+      if (isNaN(num)) return '0원';
+      return new Intl.NumberFormat('ko-KR').format(Math.round(num)) + '원';
+    }
+
+    function loadAppData() {
+      try {
+        const stored = safeGetStorage(STORAGE_KEY) || safeGetStorage('PINK_FINANCE_APP_V2') || safeGetStorage('PINK_FINANCE_APP_V1');
+        if (stored) {
+          appData = JSON.parse(stored);
+        }
+      } catch (e) {
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+
+      // 자동 복구 가드: 데이터가 없거나 채무 목록이 비어있는 경우 엑셀 기본값으로 복원
+      if (!appData || typeof appData !== 'object') {
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+      if (!appData.debts || !Array.isArray(appData.debts) || appData.debts.length === 0) {
+        appData.debts = JSON.parse(JSON.stringify(DEFAULT_DATA.debts));
+      }
+      if (!appData.incomes || !Array.isArray(appData.incomes) || appData.incomes.length === 0) {
+        appData.incomes = JSON.parse(JSON.stringify(DEFAULT_DATA.incomes));
+      }
+      if (!appData.expenses || !Array.isArray(appData.expenses) || appData.expenses.length === 0) {
+        appData.expenses = JSON.parse(JSON.stringify(DEFAULT_DATA.expenses));
+      }
+      if (!appData.habitCalendar) {
+        appData.habitCalendar = { pcCheckedDays: [], coffeeCheckedDays: [] };
+      }
+
+      safeSetStorage(STORAGE_KEY, JSON.stringify(appData));
+    }
+
+    function saveAppData() {
+      safeSetStorage(STORAGE_KEY, JSON.stringify(appData));
+      renderAll();
+    }
+
+    function confirmResetToDefault() {
+      if (window.confirm("정말 엑셀 초기 데이터로 되돌리시겠습니까?")) {
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        saveAppData();
+        showToast("🌸 엑셀 원본 데이터로 깨끗하게 복구되었습니다!");
+      }
+    }
+
+    function saveAppData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      renderAll();
+    }
+
+    function confirmResetToDefault() {
+      if (window.confirm("정말 초기 데이터로 되돌리시겠습니까?")) {
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        saveAppData();
+        showToast("🌸 초기 데이터로 깨끗하게 복구되었습니다!");
+      }
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto bg-white/95 backdrop-blur-md border border-pink-200 shadow-cute rounded-2xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-cute text-pink-700 transition transform duration-300 translate-y-4 opacity-0';
+      toast.innerHTML = `<span>🎀</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 50);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      const activeContent = document.getElementById(`tab-content-${tabName}`);
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-pink-100', 'text-pink-600');
+        btn.classList.add('text-gray-600', 'hover:bg-pink-50');
+      });
+
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-pink-100', 'text-pink-600');
+        activeBtn.classList.remove('text-gray-600', 'hover:bg-pink-50');
+      }
+
+      if (tabName === 'dashboard') {
+        renderCharts();
+      } else if (tabName === 'habits') {
+        renderHabitCalendars();
+      }
+    }
+
+    function renderAll() {
+      renderDashboard();
+      renderDebtsTable();
+      renderCashflow();
+      renderStrategy();
+      renderTimeline();
+      renderHabitCalendars();
+      renderCharts();
+    }
+
+    // --- DASHBOARD RENDER (WITH FULL NULL SAFETY) ---
+    function renderDashboard() {
+      const debts = appData.debts || [];
+      const incomes = appData.incomes || [];
+      const expenses = appData.expenses || [];
+
+      const totalDebt = debts.reduce((sum, d) => sum + (Number(d.balance) || 0), 0);
+      const totalMonthlyDebtPay = debts.reduce((sum, d) => sum + (Number(d.monthlyPayment) || 0), 0);
+      const totalIncome = incomes.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+      const totalExpense = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+      const totalFixedOutflow = totalMonthlyDebtPay + totalExpense;
+      const freeCash = totalIncome - totalFixedOutflow;
+
+      safeSetText('dash-total-debt', formatWon(totalDebt));
+      safeSetText('dash-total-income', formatWon(totalIncome));
+      safeSetText('dash-total-fixed-outflow', formatWon(totalFixedOutflow));
+      safeSetText('dash-sub-debt-pay', formatWon(totalMonthlyDebtPay));
+      safeSetText('dash-sub-expense', formatWon(totalExpense));
+      safeSetText('dash-free-cash', formatWon(freeCash));
+
+      const freeCashEl = document.getElementById('dash-free-cash');
+      if (freeCashEl) {
+        if (freeCash < 0) {
+          freeCashEl.className = 'text-lg sm:text-2xl font-bold font-num text-rose-600 truncate';
+        } else {
+          freeCashEl.className = 'text-lg sm:text-2xl font-bold font-num text-violet-600 truncate';
+        }
+      }
+
+      const baseTotal = appData.initialTotalDebt || 48674624;
+      const paidSoFar = Math.max(0, baseTotal - totalDebt);
+      const payoffPct = Math.min(100, Math.max(0, (paidSoFar / baseTotal) * 100));
+      
+      const debtBarEl = document.getElementById('debt-payoff-bar');
+      if (debtBarEl) debtBarEl.style.width = `${payoffPct.toFixed(1)}%`;
+      safeSetText('dash-debt-payoff-pct', `${payoffPct.toFixed(1)}% 달성`);
+
+      const highInterestDebts = debts
+        .filter(d => Number(d.rate) >= 10 && Number(d.balance) > 0)
+        .sort((a, b) => b.rate - a.rate);
+
+      safeSetText('dash-high-interest-count', `고금리(10%↑) ${highInterestDebts.length}건 집중 관리중`);
+
+      if (highInterestDebts.length > 0) {
+        safeSetText('hero-target-name', `${highInterestDebts[0].name} (${highInterestDebts[0].rate}%)`);
+      } else {
+        safeSetText('hero-target-name', '고금리 채무 완납 완료! 🎉');
+      }
+
+      const listContainer = document.getElementById('dash-high-interest-list');
+      if (listContainer) {
+        if (highInterestDebts.length === 0) {
+          listContainer.innerHTML = `<div class="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-center text-xs font-cute">축하합니다! 10% 이상 고금리 채무를 모두 졸업했습니다! 🥳</div>`;
+        } else {
+          listContainer.innerHTML = highInterestDebts.map(d => `
+            <div class="flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-rose-50/60 border border-rose-100 hover:bg-rose-100/60 transition gap-2">
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 text-xs sm:text-sm truncate">${d.name}</div>
+                <div class="text-[11px] text-rose-500 font-num font-semibold">금리 ${d.rate}% · 잔액 ${formatWon(d.balance)}</div>
+              </div>
+              <button onclick="quickSelectPayDebt('${d.id}')" class="text-xs bg-rose-500 hover:bg-rose-600 text-white font-cute px-3 py-1 rounded-xl shadow-sm transition whitespace-nowrap shrink-0">
+                상환하기
+              </button>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    // --- DEBTS TABLE ---
+    function renderDebtsTable() {
+      const tbody = document.getElementById('debt-table-body');
+      if (!tbody) return;
+      if (!appData.debts || appData.debts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-400 font-cute">등록된 대출 내역이 없습니다. 새 채무를 등록해 보세요! 🎀</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = appData.debts.map(debt => {
+        const isPaid = Number(debt.balance) <= 0;
+        const isHighRate = Number(debt.rate) >= 10;
+        return `
+          <tr class="hover:bg-pink-50/40 transition border-b border-pink-50 ${isPaid ? 'bg-gray-50/60 opacity-60' : ''}">
+            <td class="p-3 sm:p-4 min-w-[130px]">
+              <div class="font-bold text-gray-800 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
+                <span>${debt.name}</span>
+                ${isPaid ? '<span class="bg-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-cute">완납 🎊</span>' : ''}
+                ${!isPaid && isHighRate ? '<span class="bg-rose-100 text-rose-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold">고금리</span>' : ''}
+              </div>
+              ${debt.memo ? `<div class="text-[11px] text-pink-400 mt-0.5">${debt.memo}</div>` : ''}
+            </td>
+            <td class="p-3 sm:p-4 text-right font-num font-bold whitespace-nowrap ${isPaid ? 'text-gray-400 line-through' : 'text-pink-600'}">
+              ${formatWon(debt.balance)}
+            </td>
+            <td class="p-3 sm:p-4 text-center font-num whitespace-nowrap">
+              <span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold ${isHighRate ? 'bg-rose-100 text-rose-600' : 'bg-pink-100 text-pink-700'}">
+                ${debt.rate}%
+              </span>
+            </td>
+            <td class="p-3 sm:p-4 text-right font-num text-gray-700 whitespace-nowrap">
+              ${formatWon(debt.monthlyPayment)}
+            </td>
+            <td class="p-3 sm:p-4 text-center font-num text-gray-600 whitespace-nowrap">
+              매월 <span class="font-bold text-pink-600">${debt.dueDay}</span>일
+            </td>
+            <td class="p-3 sm:p-4 text-center text-xs font-num text-gray-500 whitespace-nowrap">
+              ${debt.maturityDate || '-'}
+            </td>
+            <td class="p-3 sm:p-4 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="editDebt('${debt.id}')" class="p-1.5 text-pink-500 hover:text-pink-700 hover:bg-pink-100 rounded-lg transition" title="수정">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteDebt('${debt.id}')" class="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition" title="삭제">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // --- CASHFLOW ---
+    function renderCashflow() {
+      const incomeListEl = document.getElementById('income-list');
+      const totalIncome = (appData.incomes || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+      safeSetText('income-total-val', formatWon(totalIncome));
+      safeSetText('incomes-count-label', `${(appData.incomes || []).length}건 등록됨`);
+
+      if (incomeListEl) {
+        if (!appData.incomes || appData.incomes.length === 0) {
+          incomeListEl.innerHTML = `<div class="text-xs text-gray-400 text-center py-4 font-cute">등록된 수입이 없습니다.</div>`;
+        } else {
+          incomeListEl.innerHTML = appData.incomes.map(inc => `
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 transition gap-2">
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 text-xs sm:text-sm truncate">${inc.name}</div>
+                <div class="text-[11px] text-gray-500 font-num">입금일: 매월 ${inc.dueDay || '-'}일 · ${inc.category === 'fixed' ? '고정수입' : '변동수입'}</div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="font-num font-bold text-emerald-600 text-xs sm:text-sm">${formatWon(inc.amount)}</span>
+                <button onclick="editInExp('${inc.id}', 'income')" class="text-gray-400 hover:text-pink-600 p-1"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button onclick="deleteInExp('${inc.id}', 'income')" class="text-gray-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      const expenseListEl = document.getElementById('expense-list');
+      const totalExpense = (appData.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+      safeSetText('expense-total-val', formatWon(totalExpense));
+      safeSetText('expenses-count-label', `${(appData.expenses || []).length}건 등록됨`);
+
+      if (expenseListEl) {
+        if (!appData.expenses || appData.expenses.length === 0) {
+          expenseListEl.innerHTML = `<div class="text-xs text-gray-400 text-center py-4 font-cute">등록된 지출이 없습니다.</div>`;
+        } else {
+          expenseListEl.innerHTML = appData.expenses.map(exp => `
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-rose-50/50 border border-rose-100 hover:bg-rose-50 transition gap-2">
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 text-xs sm:text-sm truncate">${exp.name}</div>
+                <div class="text-[11px] text-gray-500 font-num">납부일: 매월 ${exp.dueDay || '-'}일 · ${exp.category === 'fixed' ? '고정지출' : '변동지출'}</div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="font-num font-bold text-rose-600 text-xs sm:text-sm">${formatWon(exp.amount)}</span>
+                <button onclick="editInExp('${exp.id}', 'expense')" class="text-gray-400 hover:text-pink-600 p-1"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button onclick="deleteInExp('${exp.id}', 'expense')" class="text-gray-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    // --- STRATEGY & SIMULATOR ---
+    function setStrategyMode(mode) {
+      activeStrategy = mode;
+      const btnAva = document.getElementById('btn-strat-avalanche');
+      const btnSnow = document.getElementById('btn-strat-snowball');
+
+      if (mode === 'avalanche') {
+        if (btnAva) btnAva.className = "px-3.5 py-1.5 rounded-xl font-cute text-xs sm:text-sm transition bg-pink-500 text-white shadow-cute";
+        if (btnSnow) btnSnow.className = "px-3.5 py-1.5 rounded-xl font-cute text-xs sm:text-sm transition text-pink-600 hover:bg-pink-50";
+        safeSetText('strat-description', "🔥 이자 비용을 극적으로 줄이는 고금리 우선 순위 (이자 최소화 전략)");
+      } else {
+        if (btnSnow) btnSnow.className = "px-3.5 py-1.5 rounded-xl font-cute text-xs sm:text-sm transition bg-pink-500 text-white shadow-cute";
+        if (btnAva) btnAva.className = "px-3.5 py-1.5 rounded-xl font-cute text-xs sm:text-sm transition text-pink-600 hover:bg-pink-50";
+        safeSetText('strat-description', "⛄ 남은 잔액이 작은 빚부터 하나씩 없애 심리적 성취감을 높이는 눈덩이 전략");
+      }
+      renderStrategy();
+    }
+
+    function renderStrategy() {
+      const container = document.getElementById('strategy-debt-order-list');
+      if (!container) return;
+      const sortedDebts = [...(appData.debts || [])].filter(d => Number(d.balance) > 0);
+
+      if (activeStrategy === 'avalanche') {
+        sortedDebts.sort((a, b) => b.rate - a.rate);
+      } else {
+        sortedDebts.sort((a, b) => a.balance - b.balance);
+      }
+
+      if (sortedDebts.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-pink-500 font-cute">모든 대출을 완납하셨습니다! 당신은 자유인입니다 👑🌸</div>`;
+        return;
+      }
+
+      container.innerHTML = sortedDebts.map((d, index) => {
+        const isTarget = index === 0;
+        return `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition ${isTarget ? 'bg-gradient-to-r from-pink-100 to-rose-50 border-pink-400 shadow-cute' : 'bg-white border-pink-100 hover:bg-pink-50/50'} gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-cute text-xs sm:text-sm shrink-0 ${isTarget ? 'bg-pink-500 text-white shadow-cute' : 'bg-pink-100 text-pink-600'}">
+                ${index + 1}
+              </span>
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 text-xs sm:text-base flex items-center gap-1.5 flex-wrap">
+                  <span class="truncate">${d.name}</span>
+                  ${isTarget ? '<span class="bg-rose-500 text-white text-[10px] font-cute px-2 py-0.5 rounded-full shrink-0 animate-pulse">상환 타겟 🎯</span>' : ''}
+                </div>
+                <div class="text-[11px] sm:text-xs text-gray-500 mt-0.5 font-num">
+                  금리: <b class="text-pink-600">${d.rate}%</b> · 월 기본 납입: ${formatWon(d.monthlyPayment)}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-pink-100">
+              <div class="text-right">
+                <div class="text-[10px] sm:text-xs text-gray-400">남은 잔액</div>
+                <div class="font-num font-bold text-gray-800 text-xs sm:text-base">${formatWon(d.balance)}</div>
+              </div>
+              <button onclick="quickSelectPayDebt('${d.id}')" class="text-xs font-cute px-3 py-1.5 rounded-xl transition whitespace-nowrap shrink-0 ${isTarget ? 'bg-pink-500 hover:bg-pink-600 text-white shadow-cute' : 'bg-pink-100 hover:bg-pink-200 text-pink-700'}">
+                갚기
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateSimulator();
+    }
+
+    function setQuickExtra(amount) {
+      const slider = document.getElementById('extra-pay-slider');
+      if (slider) {
+        slider.value = amount;
+        updateSimulator();
+      }
+    }
+
+    function updateSimulator() {
+      const slider = document.getElementById('extra-pay-slider');
+      const extraPay = slider ? Number(slider.value) : 0;
+      safeSetText('extra-pay-label', extraPay === 0 ? '0원' : `${extraPay / 10000}만원`);
+
+      const totalDebt = (appData.debts || []).reduce((sum, d) => sum + (Number(d.balance) || 0), 0);
+      const totalMonthlyPay = (appData.debts || []).reduce((sum, d) => sum + (Number(d.monthlyPayment) || 0), 0);
+
+      if (totalDebt <= 0 || totalMonthlyPay <= 0) {
+        safeSetText('sim-base-months', '0개월');
+        safeSetText('sim-boosted-result', '이미 완납 완료!');
+        return;
+      }
+
+      const baseMonths = Math.ceil(totalDebt / totalMonthlyPay);
+      const boostedMonthly = totalMonthlyPay + extraPay;
+      const boostedMonths = Math.ceil(totalDebt / boostedMonthly);
+      const savedMonths = Math.max(0, baseMonths - boostedMonths);
+
+      const avgRate = 0.095;
+      const approxInterestSaved = Math.round((totalDebt * (avgRate / 12) * savedMonths) * 0.7);
+
+      safeSetText('sim-base-months', `약 ${baseMonths}개월 (${(baseMonths/12).toFixed(1)}년)`);
+      safeSetText('sim-boosted-result', `약 ${savedMonths}개월 단축! (${boostedMonths}개월 만에 완납) 🚀`);
+      safeSetText('sim-boosted-sub', `이자 약 ${formatWon(approxInterestSaved)} 이상 절약 효과 💸`);
+    }
+
+    // --- TIMELINE ---
+    function renderTimeline() {
+      const timelineCards = document.getElementById('timeline-dday-cards');
+      const timelineFlow = document.getElementById('monthly-timeline-flow');
+      if (!timelineCards || !timelineFlow) return;
+
+      const events = [];
+      (appData.debts || []).forEach(d => {
+        if (Number(d.balance) > 0) {
+          events.push({ type: 'debt', name: d.name, day: Number(d.dueDay) || 1, amount: d.monthlyPayment, id: d.id });
+        }
+      });
+      (appData.incomes || []).forEach(i => {
+        events.push({ type: 'income', name: i.name, day: Number(i.dueDay) || 1, amount: i.amount, id: i.id });
+      });
+      (appData.expenses || []).forEach(e => {
+        events.push({ type: 'expense', name: e.name, day: Number(e.dueDay) || 1, amount: e.amount, id: e.id });
+      });
+
+      events.sort((a, b) => a.day - b.day);
+      const today = new Date();
+      const currentDay = today.getDate();
+
+      const upcoming = events.map(ev => {
+        let diff = ev.day - currentDay;
+        if (diff < 0) diff += 30;
+        return { ...ev, diff };
+      }).sort((a, b) => a.diff - b.diff).slice(0, 4);
+
+      timelineCards.innerHTML = upcoming.map(item => {
+        const isIncome = item.type === 'income';
+        const isDebt = item.type === 'debt';
+        return `
+          <div class="bg-white border border-pink-100 rounded-3xl p-3.5 sm:p-4 shadow-cute flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <span class="inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold font-num ${item.diff === 0 ? 'bg-rose-500 text-white' : 'bg-pink-100 text-pink-600'}">
+                ${item.diff === 0 ? '오늘 입출금!' : `D-${item.diff}`}
+              </span>
+              <div class="font-bold text-gray-800 text-xs sm:text-sm mt-1 truncate max-w-[120px]">${item.name}</div>
+              <div class="text-[10px] text-gray-400 font-num">매월 ${item.day}일</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-xs font-semibold ${isIncome ? 'text-emerald-500' : isDebt ? 'text-pink-600' : 'text-gray-600'} font-num">
+                ${isIncome ? '+' : '-'}${formatWon(item.amount)}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      timelineFlow.innerHTML = events.map(item => {
+        const isIncome = item.type === 'income';
+        const isDebt = item.type === 'debt';
+        return `
+          <div class="relative flex items-center justify-between bg-white border border-pink-100 p-3 sm:p-3.5 rounded-2xl shadow-sm hover:shadow transition gap-2">
+            <span class="absolute -left-[28px] sm:-left-[38px] w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-pink-400 text-white font-cute text-[10px] sm:text-xs flex items-center justify-center ring-4 ring-white shadow">
+              ${item.day}
+            </span>
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-base sm:text-lg shrink-0">${isIncome ? '💰' : isDebt ? '🏦' : '🛒'}</span>
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
+                  <span class="truncate">${item.name}</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isIncome ? 'bg-emerald-100 text-emerald-700' : isDebt ? 'bg-pink-100 text-pink-700' : 'bg-rose-100 text-rose-700'}">
+                    ${isIncome ? '수입' : isDebt ? '대출' : '지출'}
+                  </span>
+                </div>
+                <div class="text-[10px] text-gray-400 font-num">매월 ${item.day}일</div>
+              </div>
+            </div>
+            <div class="font-num font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 ${isIncome ? 'text-emerald-600' : isDebt ? 'text-pink-600' : 'text-gray-700'}">
+              ${isIncome ? '+' : '-'}${formatWon(item.amount)}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- MINI CALENDAR HABIT CHALLENGES ---
+    function changeHabitMonth(delta) {
+      currentHabitDate.setMonth(currentHabitDate.getMonth() + delta);
+      renderHabitCalendars();
+    }
+
+    function resetHabitMonthToCurrent() {
+      currentHabitDate = new Date();
+      renderHabitCalendars();
+    }
+
+    function renderHabitCalendars() {
+      const year = currentHabitDate.getFullYear();
+      const month = currentHabitDate.getMonth();
+      const monthLabel = `${year}년 ${month + 1}월`;
+      safeSetText('habit-month-label', monthLabel);
+
+      const firstDayIndex = new Date(year, month, 1).getDay();
+      const totalDays = new Date(year, month + 1, 0).getDate();
+
+      if (!appData.habitCalendar) {
+        appData.habitCalendar = { pcCheckedDays: [], coffeeCheckedDays: [] };
+      }
+      const pcList = appData.habitCalendar.pcCheckedDays || [];
+      const coffeeList = appData.habitCalendar.coffeeCheckedDays || [];
+
+      const gridEl = document.getElementById('calendar-combined-grid');
+      let gridHTML = '';
+
+      // Leading empty spaces
+      for (let i = 0; i < firstDayIndex; i++) {
+        gridHTML += `<div class="aspect-[4/5] sm:aspect-square"></div>`;
+      }
+
+      let pcCountThisMonth = 0;
+      let coffeeCountThisMonth = 0;
+
+      for (let day = 1; day <= totalDays; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isPcChecked = pcList.includes(dateStr);
+        const isCoffeeChecked = coffeeList.includes(dateStr);
+
+        if (isPcChecked) pcCountThisMonth++;
+        if (isCoffeeChecked) coffeeCountThisMonth++;
+
+        const isFullyDone = isPcChecked && isCoffeeChecked;
+        const isPartiallyDone = isPcChecked || isCoffeeChecked;
+
+        gridHTML += `
+          <div class="stamp-cell min-h-[64px] sm:min-h-[78px] rounded-2xl border p-1 sm:p-1.5 flex flex-col justify-between transition ${
+            isFullyDone ? 'bg-pink-50 border-pink-300 shadow-sm' : isPartiallyDone ? 'bg-white border-pink-200' : 'bg-pink-50/20 border-pink-100 hover:bg-white'
+          }">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] sm:text-xs font-num font-bold ${
+                isFullyDone ? 'text-pink-600 font-extrabold' : 'text-gray-500'
+              }">${day}</span>
+              ${isFullyDone ? '<span class="text-[10px]">🌸</span>' : ''}
+            </div>
+
+            <div class="grid grid-cols-2 gap-1 mt-1">
+              <!-- PC Game Toggle Button -->
+              <button onclick="toggleHabitDay('pc', '${dateStr}')" 
+                title="피시방 안가기 (3,000원 절약)"
+                class="py-1 rounded-lg text-center transition flex items-center justify-center ${
+                  isPcChecked 
+                    ? 'bg-pink-500 text-white shadow-xs font-bold scale-105' 
+                    : 'bg-gray-100 hover:bg-pink-100 text-gray-400 opacity-60'
+                }">
+                <span class="text-xs sm:text-sm">🎮</span>
+              </button>
+
+              <!-- Coffee Toggle Button -->
+              <button onclick="toggleHabitDay('coffee', '${dateStr}')" 
+                title="커피 1잔만 마시기 (4,000원 절약)"
+                class="py-1 rounded-lg text-center transition flex items-center justify-center ${
+                  isCoffeeChecked 
+                    ? 'bg-amber-500 text-white shadow-xs font-bold scale-105' 
+                    : 'bg-gray-100 hover:bg-amber-100 text-gray-400 opacity-60'
+                }">
+                <span class="text-xs sm:text-sm">☕</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (gridEl) gridEl.innerHTML = gridHTML;
+
+      const pcPct = Math.round((pcCountThisMonth / totalDays) * 100);
+      const coffeePct = Math.round((coffeeCountThisMonth / totalDays) * 100);
+
+      const pcSavedTotal = pcCountThisMonth * 3000;
+      const coffeeSavedTotal = coffeeCountThisMonth * 4000;
+      const combinedSavedTotal = pcSavedTotal + coffeeSavedTotal;
+
+      safeSetText('pc-stat-count', `${pcCountThisMonth}일 성공 / ${totalDays}일`);
+      safeSetText('pc-stat-pct', `달성률 ${pcPct}%`);
+      safeSetText('pc-saved-estimate', `+${formatWon(pcSavedTotal)}`);
+
+      safeSetText('coffee-stat-count', `${coffeeCountThisMonth}일 성공 / ${totalDays}일`);
+      safeSetText('coffee-stat-pct', `달성률 ${coffeePct}%`);
+      safeSetText('coffee-saved-estimate', `+${formatWon(coffeeSavedTotal)}`);
+
+      safeSetText('total-saved-estimate', formatWon(combinedSavedTotal));
+
+      const targetDate = new Date('2026-10-31');
+      const today = new Date();
+      const diffTime = targetDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const ddayMini = document.getElementById('dday-cheongyak-mini');
+      if (ddayMini) {
+        ddayMini.innerText = diffDays > 0 ? `완납 D-${diffDays}일 남음!` : '목표 완납일 도달!';
+      }
+    }
+
+    function toggleHabitDay(type, dateStr) {
+      if (!appData.habitCalendar) {
+        appData.habitCalendar = { pcCheckedDays: [], coffeeCheckedDays: [] };
+      }
+
+      const listKey = type === 'pc' ? 'pcCheckedDays' : 'coffeeCheckedDays';
+      let list = appData.habitCalendar[listKey] || [];
+
+      if (list.includes(dateStr)) {
+        list = list.filter(d => d !== dateStr);
+        showToast(`${dateStr.slice(5)} ${type === 'pc' ? 'PC방 안가기' : '커피 1잔'} 도장이 취소되었습니다.`);
+      } else {
+        list.push(dateStr);
+        confetti({
+          particleCount: 30,
+          spread: 45,
+          origin: { y: 0.7 },
+          colors: type === 'pc' ? ['#FF69B4', '#F43F6F', '#FFB6C1'] : ['#F59E0B', '#FBBF24', '#D97706']
+        });
+        showToast(type === 'pc' ? `🎮 ${dateStr.slice(5)} PC방 안 가고 3,000원 방어 성공! 🌸` : `☕ ${dateStr.slice(5)} 커피 1잔만 마시고 4,000원 방어 성공! 🌸`);
+      }
+
+      appData.habitCalendar[listKey] = list;
+      saveAppData();
+    }
+
+    // --- DEBT AUTO-FILL REPAYMENT MODAL ---
+    function openDebtPayModal(preselectId = null) {
+      const select = document.getElementById('pay-target-debt');
+      if (!select) return;
+      const activeDebts = (appData.debts || []).filter(d => Number(d.balance) > 0);
+
+      if (activeDebts.length === 0) {
+        showToast("상환할 남은 대출이 없습니다! 모두 완납하셨어요! 👑🌸");
+        return;
+      }
+
+      select.innerHTML = activeDebts.map(d => 
+        `<option value="${d.id}" ${d.id === preselectId ? 'selected' : ''}>${d.name} (잔액: ${formatWon(d.balance)})</option>`
+      ).join('');
+
+      onPayTargetDebtChange();
+      openModal('modal-pay');
+    }
+
+    function quickSelectPayDebt(debtId) {
+      openDebtPayModal(debtId);
+    }
+
+    function onPayTargetDebtChange() {
+      const select = document.getElementById('pay-target-debt');
+      if (!select) return;
+      const debtId = select.value;
+      const debt = (appData.debts || []).find(d => d.id === debtId);
+
+      if (debt) {
+        const autoAmount = debt.monthlyPayment > 0 ? debt.monthlyPayment : debt.balance;
+        const input = document.getElementById('pay-amount-input');
+        if (input) {
+          input.value = autoAmount;
+          updatePayModalBalancePreview(debt, autoAmount);
+
+          input.oninput = function() {
+            updatePayModalBalancePreview(debt, Number(input.value) || 0);
+          };
+        }
+      }
+    }
+
+    function updatePayModalBalancePreview(debt, payAmount) {
+      safeSetText('pay-target-current-balance', `현재 잔액: ${formatWon(debt.balance)}`);
+      const afterBal = Math.max(0, debt.balance - payAmount);
+      safeSetText('pay-target-after-balance', `상환 후: ${formatWon(afterBal)}`);
+    }
+
+    function executeDebtPayoff() {
+      const select = document.getElementById('pay-target-debt');
+      const input = document.getElementById('pay-amount-input');
+      if (!select || !input) return;
+
+      const debtId = select.value;
+      const amount = Number(input.value);
+
+      if (!amount || amount <= 0) {
+        showToast("올바른 상환 금액을 입력해주세요.");
+        return;
+      }
+
+      const debt = (appData.debts || []).find(d => d.id === debtId);
+      if (!debt) return;
+
+      const newBalance = Math.max(0, debt.balance - amount);
+      debt.balance = newBalance;
+
+      closeModal('modal-pay');
+      saveAppData();
+
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#FF1493', '#FF69B4', '#FFB6C1', '#FFF']
+      });
+
+      if (newBalance === 0) {
+        showToast(`🎊 축하합니다!! '${debt.name}' 대출을 완전히 졸업했습니다!! 👑🌸`);
+      } else {
+        showToast(`🌸 '${debt.name}' ${formatWon(amount)} 자동 상환 완료! (남은 잔액: ${formatWon(newBalance)})`);
+      }
+    }
+
+    // --- CHARTS ---
+    function renderCharts() {
+      const pieCanvas = document.getElementById('debtPieChart');
+      if (pieCanvas) {
+        const pieCtx = pieCanvas.getContext('2d');
+        const debts = appData.debts || [];
+        const labels = debts.map(d => d.name);
+        const data = debts.map(d => d.balance);
+        const colors = ['#F43F6F', '#FB7193', '#FEA3B7', '#FECDD8', '#FF85A1', '#FF99C8', '#D81B60', '#C2185B'];
+
+        if (debtChart) debtChart.destroy();
+        debtChart = new Chart(pieCtx, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: data,
+              backgroundColor: colors.slice(0, labels.length),
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { boxWidth: 10, font: { size: 9 }, color: '#4A333E' }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) { return ` ${ctx.label}: ${formatWon(ctx.raw)}`; }
+                }
+              }
+            },
+            cutout: '62%'
+          }
+        });
+      }
+
+      const barCanvas = document.getElementById('cashflowBarChart');
+      if (barCanvas) {
+        const barCtx = barCanvas.getContext('2d');
+        const totalIncome = (appData.incomes || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+        const totalDebtPay = (appData.debts || []).reduce((sum, d) => sum + (Number(d.monthlyPayment) || 0), 0);
+        const totalExpense = (appData.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+        const freeCash = Math.max(0, totalIncome - (totalDebtPay + totalExpense));
+
+        if (cashflowChart) cashflowChart.destroy();
+        cashflowChart = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: ['수입', '대출원리금', '생활고정비', '여유자금'],
+            datasets: [{
+              label: '금액',
+              data: [totalIncome, totalDebtPay, totalExpense, freeCash],
+              backgroundColor: ['#10B981', '#F43F6F', '#FB7193', '#8B5CF6'],
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: function(ctx) { return ` ${formatWon(ctx.raw)}`; } } }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: '#FFE8EE' },
+                ticks: {
+                  font: { family: 'Nunito', size: 9 },
+                  callback: function(val) { return (val / 10000) + '만'; }
+                }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 10, weight: 'bold' } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Modal Generic Controls
+    function openModal(id) { 
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('hidden'); 
+    }
+    function closeModal(id) { 
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden'); 
+    }
+
+    // Debt CRUD Forms
+    function openDebtModal(debtId = null) {
+      const form = document.getElementById('debt-form');
+      if (form) form.reset();
+
+      if (debtId) {
+        const debt = (appData.debts || []).find(d => d.id === debtId);
+        if (debt) {
+          safeSetHTML('modal-debt-title', `<span>✏️</span> 채무 수정: ${debt.name}`);
+          document.getElementById('debt-form-id').value = debt.id;
+          document.getElementById('debt-form-name').value = debt.name;
+          document.getElementById('debt-form-balance').value = debt.balance;
+          document.getElementById('debt-form-rate').value = debt.rate;
+          document.getElementById('debt-form-monthly').value = debt.monthlyPayment;
+          document.getElementById('debt-form-day').value = debt.dueDay;
+          document.getElementById('debt-form-maturity').value = debt.maturityDate || '';
+          document.getElementById('debt-form-memo').value = debt.memo || '';
+        }
+      } else {
+        safeSetHTML('modal-debt-title', `<span>🌸</span> 새 채무 등록`);
+        const idInput = document.getElementById('debt-form-id');
+        const dayInput = document.getElementById('debt-form-day');
+        if (idInput) idInput.value = '';
+        if (dayInput) dayInput.value = '25';
+      }
+      openModal('modal-debt');
+    }
+
+    function editDebt(debtId) { openDebtModal(debtId); }
+    function deleteDebt(debtId) {
+      const debt = (appData.debts || []).find(d => d.id === debtId);
+      if (!debt) return;
+      if (window.confirm(`정말 '${debt.name}' 항목을 삭제하시겠습니까?`)) {
+        appData.debts = appData.debts.filter(d => d.id !== debtId);
+        saveAppData();
+        showToast(`'${debt.name}' 채무가 삭제되었습니다.`);
+      }
+    }
+
+    function handleDebtFormSubmit(event) {
+      event.preventDefault();
+      const id = document.getElementById('debt-form-id').value;
+      const name = document.getElementById('debt-form-name').value.trim();
+      const balance = Number(document.getElementById('debt-form-balance').value);
+      const rate = Number(document.getElementById('debt-form-rate').value);
+      const monthlyPayment = Number(document.getElementById('debt-form-monthly').value);
+      const dueDay = Number(document.getElementById('debt-form-day').value);
+      const maturityDate = document.getElementById('debt-form-maturity').value;
+      const memo = document.getElementById('debt-form-memo').value.trim();
+
+      if (id) {
+        const index = appData.debts.findIndex(d => d.id === id);
+        if (index !== -1) {
+          appData.debts[index] = { ...appData.debts[index], name, balance, rate, monthlyPayment, dueDay, maturityDate, memo };
+          showToast(`'${name}' 정보가 수정되었습니다! 🎀`);
+        }
+      } else {
+        appData.debts.push({ id: 'd_' + Date.now(), name, balance, rate, monthlyPayment, dueDay, maturityDate, memo });
+        showToast(`'${name}' 새 채무가 등록되었습니다!`);
+      }
+      closeModal('modal-debt');
+      saveAppData();
+    }
+
+    // InExp CRUD
+    function openIncomeExpenseModal(type, itemId = null) {
+      const form = document.getElementById('inexp-form');
+      if (form) form.reset();
+      const typeInput = document.getElementById('inexp-form-type');
+      if (typeInput) typeInput.value = type;
+
+      const dayInput = document.getElementById('inexp-form-day');
+      if (type === 'income') {
+        safeSetHTML('modal-inexp-title', `<span>💰</span> 수입 항목 등록 / 수정`);
+        if (dayInput) dayInput.placeholder = "예: 24 (월급일)";
+      } else {
+        safeSetHTML('modal-inexp-title', `<span>💸</span> 고정 지출 등록 / 수정`);
+        if (dayInput) dayInput.placeholder = "예: 25 (납부일)";
+      }
+
+      if (itemId) {
+        const list = type === 'income' ? appData.incomes : appData.expenses;
+        const item = (list || []).find(x => x.id === itemId);
+        if (item) {
+          document.getElementById('inexp-form-id').value = item.id;
+          document.getElementById('inexp-form-name').value = item.name;
+          document.getElementById('inexp-form-amount').value = item.amount;
+          document.getElementById('inexp-form-day').value = item.dueDay || '';
+          document.getElementById('inexp-form-category').value = item.category || 'fixed';
+        }
+      } else {
+        const idInput = document.getElementById('inexp-form-id');
+        if (idInput) idInput.value = '';
+      }
+      openModal('modal-inexp');
+    }
+
+    function editInExp(id, type) { openIncomeExpenseModal(type, id); }
+    function deleteInExp(id, type) {
+      const list = type === 'income' ? appData.incomes : appData.expenses;
+      const item = (list || []).find(x => x.id === id);
+      if (!item) return;
+      if (window.confirm(`'${item.name}' 항목을 삭제하시겠습니까?`)) {
+        if (type === 'income') appData.incomes = appData.incomes.filter(x => x.id !== id);
+        else appData.expenses = appData.expenses.filter(x => x.id !== id);
+        saveAppData();
+        showToast(`'${item.name}' 항목이 삭제되었습니다.`);
+      }
+    }
+
+    function handleInExpFormSubmit(event) {
+      event.preventDefault();
+      const type = document.getElementById('inexp-form-type').value;
+      const id = document.getElementById('inexp-form-id').value;
+      const name = document.getElementById('inexp-form-name').value.trim();
+      const amount = Number(document.getElementById('inexp-form-amount').value);
+      const dueDay = Number(document.getElementById('inexp-form-day').value) || 1;
+      const category = document.getElementById('inexp-form-category').value;
+
+      const list = type === 'income' ? appData.incomes : appData.expenses;
+
+      if (id) {
+        const index = list.findIndex(x => x.id === id);
+        if (index !== -1) {
+          list[index] = { ...list[index], name, amount, dueDay, category };
+          showToast(`'${name}' 정보가 수정되었습니다.`);
+        }
+      } else {
+        list.push({ id: (type === 'income' ? 'i_' : 'e_') + Date.now(), name, amount, dueDay, category });
+        showToast(`'${name}' 항목이 추가되었습니다!`);
+      }
+      closeModal('modal-inexp');
+      saveAppData();
+    }
+
+    // Backup & Restore
+    function exportDataJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `financial_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("📥 백업 데이터가 파일로 저장되었습니다!");
+    }
+
+    function importDataJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.debts && imported.incomes && imported.expenses) {
+            appData = imported;
+            saveAppData();
+            showToast("📤 데이터를 성공적으로 불러왔습니다! 🌸");
+          } else {
+            showToast("올바른 백업 파일 형식이 아닙니다.");
+          }
+        } catch (err) {
+          showToast("파일을 읽는 도중 오류가 발생했습니다.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 초기 실행 안전 보장 (즉시 실행 + DOMContentLoaded + window.load)
+    function initApp() {
+      loadAppData();
+      renderAll();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+    window.addEventListener('load', initApp);
+  </script>
+</body>
+</html>
